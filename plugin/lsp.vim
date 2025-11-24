@@ -107,6 +107,7 @@ command! -range -nargs=* -complete=customlist,lsp#ui#vim#code_action#complete Ls
 command! -range -nargs=* -complete=customlist,lsp#ui#vim#code_action#complete LspCodeActionSync call lsp#ui#vim#code_action#do(
             \ extend({ 'sync': v:true, 'selection': <range> != 0 }, lsp#utils#args#_parse(<q-args>, {
             \   'ui': { 'type': type('') },
+            \   'sync_timeout': {'type': type(0)},
             \ }, 'query')))
 command! LspCodeLens call lsp#ui#vim#code_lens#do({})
 command! LspDeclaration call lsp#ui#vim#declaration(0, <q-mods>)
