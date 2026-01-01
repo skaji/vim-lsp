@@ -84,7 +84,8 @@ endfunction
 function! s:show_hover(ui, server_name, request, response) abort
     if !has_key(a:response, 'result') || empty(a:response['result']) || 
         \ empty(a:response['result']['contents'])
-        call lsp#utils#error('No hover information found in server - ' . a:server_name)
+        echo 'No hover'
+        " call lsp#utils#error('No hover information found in server - ' . a:server_name)
         return
     endif
 
