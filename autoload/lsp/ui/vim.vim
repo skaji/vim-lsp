@@ -28,7 +28,7 @@ function! lsp#ui#vim#declaration(in_preview, ...) abort
 endfunction
 
 function! lsp#ui#vim#definition(in_preview, ...) abort
-    let l:ctx = { 'in_preview': a:in_preview }
+    let l:ctx = { 'in_preview': a:in_preview, 'jdt': !a:in_preview }
     if a:0
         let l:ctx['mods'] = a:1
     endif
@@ -55,7 +55,7 @@ function! s:list_location(method, ctx, ...) abort
     let l:command_id = lsp#_new_command()
 
 
-    let l:ctx = extend({ 'counter': len(l:servers), 'list':[], 'last_command_id': l:command_id, 'jump_if_one': 1, 'mods': '', 'in_preview': 0 }, a:ctx)
+    let l:ctx = extend({ 'counter': len(l:servers), 'list':[], 'last_command_id': l:command_id, 'jump_if_one': 1, 'mods': '', 'in_preview': 0, 'bufnr': bufnr('%') }, a:ctx)
     if len(l:servers) == 0
         call s:not_supported('Retrieving ' . l:operation)
         return
@@ -297,13 +297,48 @@ function! s:handle_location(ctx, server, type, data) abort "ctx = {counter, list
         return
     endif
 
-    let a:ctx['counter'] = a:ctx['counter'] - 1
-
     if lsp#client#is_error(a:data['response']) || !has_key(a:data['response'], 'result')
         call lsp#utils#error('Failed to retrieve '. a:type . ' for ' . a:server . ': ' . lsp#client#error_message(a:data['response']))
     else
-        let a:ctx['list'] = a:ctx['list'] + lsp#utils#location#_lsp_to_vim_list(a:data['response']['result'])
+        let l:locations = a:data['response']['result']
+        if get(a:ctx, 'jdt', v:false)
+                    \ && type(l:locations) == v:t_list
+                    \ && len(l:locations) == 1
+                    \ && lsp#internal#jdt#is_uri(get(l:locations[0], 'uri', ''))
+            let l:location = l:locations[0]
+            let l:uri = l:location['uri']
+            if lsp#internal#jdt#is_loaded(l:uri)
+                call add(a:ctx['list'], lsp#internal#jdt#to_vim_location(l:location))
+            else
+                call lsp#send_request(a:server, {
+                    \ 'method': 'java/classFileContents',
+                    \ 'params': { 'uri': l:uri },
+                    \ 'bufnr': a:ctx['bufnr'],
+                    \ 'on_notification': function('s:handle_jdt_content', [a:ctx, a:server, a:type, l:location]),
+                    \ })
+                return
+            endif
+        else
+            let a:ctx['list'] += lsp#utils#location#_lsp_to_vim_list(l:locations)
+        endif
     endif
+
+    call s:complete_location(a:ctx, a:server, a:type)
+endfunction
+
+function! s:handle_jdt_content(ctx, server, type, location, data) abort
+    if lsp#client#is_error(a:data['response']) || !has_key(a:data['response'], 'result')
+        call lsp#utils#error('Failed to retrieve class file contents for ' . a:server . ': ' . lsp#client#error_message(a:data['response']))
+    else
+        call lsp#internal#jdt#load_content(a:location['uri'], a:data['response']['result'])
+        call add(a:ctx['list'], lsp#internal#jdt#to_vim_location(a:location))
+    endif
+
+    call s:complete_location(a:ctx, a:server, a:type)
+endfunction
+
+function! s:complete_location(ctx, server, type) abort
+    let a:ctx['counter'] -= 1
 
     if a:ctx['counter'] == 0
         if empty(a:ctx['list'])
@@ -315,6 +350,9 @@ function! s:handle_location(ctx, server, type, data) abort "ctx = {counter, list
 
             if len(a:ctx['list']) == 1 && a:ctx['jump_if_one'] && !a:ctx['in_preview']
                 call lsp#utils#location#_open_vim_list_item(l:loc, a:ctx['mods'])
+                if lsp#internal#jdt#is_uri(l:loc['filename'])
+                    call lsp#activate()
+                endif
                 echo 'Retrieved ' . a:type
                 redraw
             elseif !a:ctx['in_preview']

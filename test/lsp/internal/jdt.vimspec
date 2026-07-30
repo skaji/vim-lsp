@@ -1,0 +1,47 @@
+Describe lsp#internal#jdt
+    After each
+        setlocal modifiable noreadonly buftype= bufhidden= swapfile
+        setlocal filetype=
+        silent %delete _
+        silent 0file
+    End
+
+    It recognizes jdt URIs
+        Assert True(lsp#internal#jdt#is_uri('jdt://contents/example.jar/Example.java?handle'))
+        Assert False(lsp#internal#jdt#is_uri('file:///tmp/Example.java'))
+    End
+
+    It loads class file contents into a readonly Java buffer
+        let uri = 'jdt://contents/example.jar/Example.java?handle'
+        execute 'file ' . fnameescape(uri)
+        let bnr = lsp#internal#jdt#load_content(uri, "package example;\n\nclass Example {}\n")
+
+        Assert Equals(bufname(bnr), uri)
+        Assert True(bufloaded(bnr))
+        Assert True(lsp#internal#jdt#is_loaded(uri))
+        Assert Equals(getbufline(bnr, 1, '$'), ['package example;', '', 'class Example {}', ''])
+        Assert Equals(getbufvar(bnr, '&filetype'), 'java')
+        Assert Equals(getbufvar(bnr, '&buftype'), 'nofile')
+        Assert Equals(getbufvar(bnr, '&modifiable'), 0)
+        Assert Equals(getbufvar(bnr, '&readonly'), 1)
+    End
+
+    It creates a Vim location from a loaded jdt Location
+        let uri = 'jdt://contents/example.jar/Example.java?handle'
+        execute 'file ' . fnameescape(uri)
+        call lsp#internal#jdt#load_content(uri, "package example;\n\nclass Example {}\n")
+
+        let location = lsp#internal#jdt#to_vim_location({
+            \ 'uri': uri,
+            \ 'range': {
+            \   'start': {'line': 2, 'character': 6},
+            \   'end': {'line': 2, 'character': 13},
+            \ },
+            \ })
+
+        Assert Equals(location['filename'], uri)
+        Assert Equals(location['lnum'], 3)
+        Assert Equals(location['col'], 7)
+        Assert Equals(location['text'], 'class Example {}')
+    End
+End
