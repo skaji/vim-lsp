@@ -605,7 +605,7 @@ function! lsp#default_get_supported_capabilities(server_info) abort
     \           'symbolKind': {
     \              'valueSet': lsp#ui#vim#utils#get_symbol_kinds()
     \           },
-    \           'hierarchicalDocumentSymbolSupport': v:false,
+    \           'hierarchicalDocumentSymbolSupport': v:true,
     \           'labelSupport': v:false
     \       },
     \       'foldingRange': {
