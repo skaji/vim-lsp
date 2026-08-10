@@ -1486,6 +1486,10 @@ function! lsp#_new_command() abort
     return s:last_command_id
 endfunction
 
+function! lsp#_new_hover() abort
+    call lsp#stream(1, { 'hover': 1 })
+endfunction
+
 function! lsp#_last_command() abort
     return s:last_command_id
 endfunction

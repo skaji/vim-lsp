@@ -52,7 +52,7 @@ function! lsp#internal#document_hover#under_cursor#do(options) abort
 
     redraw | echo 'Retrieving hover ...'
 
-    call lsp#_new_command()
+    call lsp#_new_hover()
 
     " TODO: ask user to select server for formatting if there are multiple servers
     let l:request = {
@@ -70,7 +70,7 @@ function! lsp#internal#document_hover#under_cursor#do(options) abort
         \ lsp#callbag#tap({x->s:show_hover(l:ui, x['server_name'], x['request'], x['response'])}),
         \ lsp#callbag#takeUntil(lsp#callbag#pipe(
         \   lsp#stream(),
-        \   lsp#callbag#filter({x->has_key(x, 'command')}),
+        \   lsp#callbag#filter({x->has_key(x, 'command') || has_key(x, 'hover')}),
         \ )),
         \ lsp#callbag#subscribe(),
         \ )
