@@ -496,7 +496,8 @@ endfunction
 function! s:ensure_start(buf, server_name, cb) abort
     let l:path = lsp#utils#get_buffer_path(a:buf)
 
-    if lsp#utils#is_remote_uri(l:path) || !has_key(s:servers, a:server_name)
+    if (lsp#utils#is_remote_uri(l:path) && !lsp#internal#jdt#is_uri(l:path))
+                \ || !has_key(s:servers, a:server_name)
         let l:msg = s:new_rpc_error('ignoring start server due to remote uri', { 'server_name': a:server_name, 'uri': l:path})
         call lsp#log(l:msg)
         call a:cb(l:msg)
@@ -615,7 +616,7 @@ function! lsp#default_get_supported_capabilities(server_info) abort
     \           'symbolKind': {
     \              'valueSet': lsp#ui#vim#utils#get_symbol_kinds()
     \           },
-    \           'hierarchicalDocumentSymbolSupport': v:false,
+    \           'hierarchicalDocumentSymbolSupport': v:true,
     \           'labelSupport': v:false
     \       },
     \       'foldingRange': {
@@ -1493,6 +1494,10 @@ function! lsp#_new_command() abort
     let s:last_command_id += 1
     call lsp#stream(1, { 'command': 1 })
     return s:last_command_id
+endfunction
+
+function! lsp#_new_hover() abort
+    call lsp#stream(1, { 'hover': 1 })
 endfunction
 
 function! lsp#_last_command() abort

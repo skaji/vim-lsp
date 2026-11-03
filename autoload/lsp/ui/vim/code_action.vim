@@ -20,6 +20,7 @@ endfunction
 function! lsp#ui#vim#code_action#do(option) abort
     let l:selection = get(a:option, 'selection', v:false)
     let l:sync = get(a:option, 'sync', v:false)
+    let l:sync_timeout = get(a:option, 'sync_timeout', -1)
     let l:query = get(a:option, 'query', '')
     let l:ui = get(a:option, 'ui', g:lsp_code_action_ui)
     if empty(l:ui)
@@ -56,6 +57,7 @@ function! lsp#ui#vim#code_action#do(option) abort
                     \   },
                     \ },
                     \ 'sync': l:sync,
+                    \ 'sync_timeout': l:sync_timeout,
                     \ 'on_notification': function('s:handle_code_action', [l:ui, l:ctx, l:server_name, l:command_id, l:sync, l:query, l:bufnr]),
                     \ })
     endfor
